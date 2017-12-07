@@ -71,10 +71,14 @@ l1, l2, logits = multilayer_perceptron(X)
 #----------------- first 
 test_first = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['out']))))
 test_first2 = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['h2']))))
-test_first3 = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['h1']))))
+#test_first3 = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['h1']))))
+
+#------------------ second
+#test_sec
 # Define loss and optimizer
+lambda1 = 0.00001
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y)) + 0.5*(test_first + test_first2 + test_first3)
+    logits=logits, labels=Y)) + lambda1*(0.5*test_first + test_first2)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
