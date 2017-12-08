@@ -23,7 +23,7 @@ from __future__ import print_function
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
 mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
-
+import numpy as np
 import tensorflow as tf
 
 # Parameters
@@ -75,15 +75,18 @@ test_first2 = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['h2'])
 
 #------------------ second
 #test_sec
+test_second_denom = tf.sqrt(tf.reduce_sum(tf.square(tf.gradients(logits, weights['out'])), 1))
+test_second = tf.gradients(logits, weights['out'])
+test_second = tf.log(tf.square(tf.reduce_sum(tf.divide(test_second, test_second_denom))))
 # Define loss and optimizer
 lambda1 = 0.00001
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y)) + lambda1*(0.5*test_first + test_first2)
+    logits=logits, labels=Y)) #+ lambda1*(0.5*test_first + test_first2 + test_second)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
 init = tf.global_variables_initializer()
-
+saver = tf.train.Saver()
 with tf.Session() as sess:
     sess.run(init)
 
@@ -103,10 +106,13 @@ with tf.Session() as sess:
         if epoch % display_step == 0:
             print("Epoch:", '%04d' % (epoch+1), "cost={:.9f}".format(avg_cost))
     print("Optimization Finished!")
-
+    #save_path = saver.save(sess, '/research/rraju2/results2')
+    #print("Model saved in file: %s" % save_path)
     # Test model
     pred = tf.nn.softmax(logits)  # Apply softmax to logits
     correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(Y, 1))
     # Calculate accuracy
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
     print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
+    w1, w2, w3 = sess.run([weights['h1'], weights['h2'], weights['out']])
+    np.savetxt("w3.txt",w3, delimiter=", ")
