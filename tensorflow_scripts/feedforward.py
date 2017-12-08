@@ -81,7 +81,7 @@ test_second = tf.log(tf.square(tf.reduce_sum(tf.divide(test_second, test_second_
 # Define loss and optimizer
 lambda1 = 0.00001
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y)) #+ lambda1*(0.5*test_first + test_first2 + test_second)
+    logits=logits, labels=Y)) + lambda1*(0.5*test_first + test_first2 + test_second)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
@@ -115,4 +115,7 @@ with tf.Session() as sess:
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
     print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
     w1, w2, w3 = sess.run([weights['h1'], weights['h2'], weights['out']])
-    np.savetxt("w3.txt",w3, delimiter=", ")
+    for i in weights:
+	wx = sess.run(weights[i])
+	txt = 'w' + str(i) + 'Updated.txt'
+    	np.savetxt(txt,wx, delimiter=", ")
