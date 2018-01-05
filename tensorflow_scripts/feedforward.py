@@ -27,9 +27,9 @@ import numpy as np
 import tensorflow as tf
 
 # Parameters
-learning_rate = 0.001
+learning_rate = .0001
 epsilon = .1
-training_epochs = 20
+training_epochs = 15
 batch_size = 100
 display_step = 1
 
@@ -74,10 +74,13 @@ def ft(win):
 	test = tf.zeros(tf.shape(win),tf.float32)
 	for i in range(n_classes):
 	    test += tf.square(tf.gradients(logits[i],win))
-	return test
+	return tf.clip_by_value(test,1e-37,1e+37)
 test_ft = tf.reduce_sum(tf.log(ft(weights['out'])))
 test_ft1 = tf.reduce_sum(tf.log(ft(weights['h2'])))
 test_ft2 = tf.reduce_sum(tf.log(ft(weights['h1'])))
+
+
+
 
 #----------------- try something
 def st(win1):
@@ -86,14 +89,14 @@ def st(win1):
 	    inter1 = tf.gradients(logits[i],win1)
 	    inter2 = tf.sqrt(ft(win1))
 	    test += tf.square(tf.reduce_sum(tf.div(inter1,inter2)))
-	return tf.log(test)
+	return tf.log(tf.clip_by_value(test,1e-37,1e+37))
 test_st = st(weights['out'])
 test_st1 = st(weights['h2'])
 test_st2 = st(weights['h1'])
 # Define loss and optimizer
 lambda1 = 0.00001
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y)) + 0.5 * lambda1*(-1 * tf.log(epsilon) + test_ft + test_st + test_ft1 + test_st1)
+    logits=logits, labels=Y)) + 0.5 * lambda1*(-1 * tf.log(epsilon) + test_ft + test_st + test_ft1 + test_st1 + test_ft2 + test_st2)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
