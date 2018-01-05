@@ -48,10 +48,11 @@ weights = {
     'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
     'out': tf.Variable(tf.random_normal([n_hidden_2, n_classes]))
 }
+
 biases = {
-    'b1': tf.Variable(tf.random_normal([n_hidden_1])),
-    'b2': tf.Variable(tf.random_normal([n_hidden_2])),
-    'out': tf.Variable(tf.random_normal([n_classes]))
+    'b1': tf.Variable(tf.random_normal([n_hidden_1]), tf.float64),
+    'b2': tf.Variable(tf.random_normal([n_hidden_2]), tf.float64),
+    'out': tf.Variable(tf.random_normal([n_classes]), tf.float64)
 }
 
 
@@ -67,29 +68,38 @@ def multilayer_perceptron(x):
 
 # Construct model
 l1, l2, logits = multilayer_perceptron(X)
-
+#--------try something
+for i in range(n_classes):
+    test = tf.gradients(logits[i],weights['out'])
 #----------------- first 
 test_first = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['out']))))
 test_first2 = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['h2']))))
-#test_first3 = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['h1']))))
+test_first3 = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['h1']))))
 
 #------------------ second
 #test_sec
 test_second_denom = tf.sqrt(tf.reduce_sum(tf.square(tf.gradients(logits, weights['out'])), 1))
 test_second = tf.gradients(logits, weights['out'])
 test_second = tf.log(tf.square(tf.reduce_sum(tf.divide(test_second, test_second_denom))))
+
+test_second_denom1 = tf.sqrt(tf.reduce_sum(tf.square(tf.gradients(logits, weights['h2'])), 1))
+test_second1 = tf.gradients(logits, weights['h2'])
+test_second1 = tf.log(tf.square(tf.reduce_sum(tf.divide(test_second1, test_second_denom1))))
 # Define loss and optimizer
 lambda1 = 0.00001
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y)) + lambda1*(0.5*test_first + test_first2 + test_second)
+    logits=logits, labels=Y)) + 0.5 * lambda1*(test_first + test_second)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
 init = tf.global_variables_initializer()
-saver = tf.train.Saver()
+
 with tf.Session() as sess:
     sess.run(init)
 
+    export_dir = '/research/rraju2/mlp_mnist_test/'
+#    builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
+ #   builder.add_meta_graph_and_variables(sess, [tf.saved_model.tag_constants.TRAINING])
     # Training cycle
     for epoch in range(training_epochs):
         avg_cost = 0.
@@ -106,16 +116,17 @@ with tf.Session() as sess:
         if epoch % display_step == 0:
             print("Epoch:", '%04d' % (epoch+1), "cost={:.9f}".format(avg_cost))
     print("Optimization Finished!")
-    #save_path = saver.save(sess, '/research/rraju2/results2')
-    #print("Model saved in file: %s" % save_path)
+  #  builder.save()	
+
     # Test model
     pred = tf.nn.softmax(logits)  # Apply softmax to logits
     correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(Y, 1))
     # Calculate accuracy
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
     print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
-    w1, w2, w3 = sess.run([weights['h1'], weights['h2'], weights['out']])
-    for i in weights:
-	wx = sess.run(weights[i])
-	txt = 'w' + str(i) + 'Updated.txt'
-    	np.savetxt(txt,wx, delimiter=", ")
+
+#    w1, w2, w3 = sess.run([weights['h1'], weights['h2'], weights['out']])
+#    for i in weights:
+#	wx = sess.run(weights[i])
+#	txt = 'w' + str(i) + 'Updated1.csv'
+#    	np.savetxt(txt,wx, delimiter=", ")
