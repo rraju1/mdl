@@ -28,7 +28,8 @@ import tensorflow as tf
 
 # Parameters
 learning_rate = 0.001
-training_epochs = 15
+epsilon = .1
+training_epochs = 20
 batch_size = 100
 display_step = 1
 
@@ -68,27 +69,31 @@ def multilayer_perceptron(x):
 
 # Construct model
 l1, l2, logits = multilayer_perceptron(X)
-#--------try something
-for i in range(n_classes):
-    test = tf.gradients(logits[i],weights['out'])
-#----------------- first 
-test_first = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['out']))))
-test_first2 = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['h2']))))
-test_first3 = tf.reduce_sum(tf.log(tf.square(tf.gradients(logits, weights['h1']))))
+#----------------- try something
+def ft(win):
+	test = tf.zeros(tf.shape(win),tf.float32)
+	for i in range(n_classes):
+	    test += tf.square(tf.gradients(logits[i],win))
+	return test
+test_ft = tf.reduce_sum(tf.log(ft(weights['out'])))
+test_ft1 = tf.reduce_sum(tf.log(ft(weights['h2'])))
+test_ft2 = tf.reduce_sum(tf.log(ft(weights['h1'])))
 
-#------------------ second
-#test_sec
-test_second_denom = tf.sqrt(tf.reduce_sum(tf.square(tf.gradients(logits, weights['out'])), 1))
-test_second = tf.gradients(logits, weights['out'])
-test_second = tf.log(tf.square(tf.reduce_sum(tf.divide(test_second, test_second_denom))))
-
-test_second_denom1 = tf.sqrt(tf.reduce_sum(tf.square(tf.gradients(logits, weights['h2'])), 1))
-test_second1 = tf.gradients(logits, weights['h2'])
-test_second1 = tf.log(tf.square(tf.reduce_sum(tf.divide(test_second1, test_second_denom1))))
+#----------------- try something
+def st(win1):
+	test = 0
+	for i in range(n_classes):
+	    inter1 = tf.gradients(logits[i],win1)
+	    inter2 = tf.sqrt(ft(win1))
+	    test += tf.square(tf.reduce_sum(tf.div(inter1,inter2)))
+	return tf.log(test)
+test_st = st(weights['out'])
+test_st1 = st(weights['h2'])
+test_st2 = st(weights['h1'])
 # Define loss and optimizer
 lambda1 = 0.00001
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y)) + 0.5 * lambda1*(test_first + test_second)
+    logits=logits, labels=Y)) + 0.5 * lambda1*(-1 * tf.log(epsilon) + test_ft + test_st + test_ft1 + test_st1)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
@@ -96,7 +101,6 @@ init = tf.global_variables_initializer()
 
 with tf.Session() as sess:
     sess.run(init)
-
     export_dir = '/research/rraju2/mlp_mnist_test/'
 #    builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
  #   builder.add_meta_graph_and_variables(sess, [tf.saved_model.tag_constants.TRAINING])
