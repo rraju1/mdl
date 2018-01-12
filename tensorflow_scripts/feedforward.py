@@ -25,7 +25,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
 import numpy as np
 import tensorflow as tf
-
+import os
 # Parameters
 learning_rate = .0001
 epsilon = .1
@@ -96,17 +96,21 @@ test_st2 = st(weights['h1'])
 # Define loss and optimizer
 lambda1 = 0.00001
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y)) + 0.5 * lambda1*(-1 * tf.log(epsilon) + test_ft + test_st + test_ft1 + test_st1 + test_ft2 + test_st2)
+    logits=logits, labels=Y))# + 0.5 * lambda1*(-1 * tf.log(epsilon) + test_ft + test_st + test_ft1 + test_st1 + test_ft2 + test_st2)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
 init = tf.global_variables_initializer()
 
+saver = tf.train.Saver()
+
 with tf.Session() as sess:
     sess.run(init)
     export_dir = '/research/rraju2/mlp_mnist_test/'
-#    builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
- #   builder.add_meta_graph_and_variables(sess, [tf.saved_model.tag_constants.TRAINING])
+    if not os.path.exists(export_dir):
+    	os.makedirs(export_dir)
+   # builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
+   # builder.add_meta_graph_and_variables(sess, [tf.saved_model.tag_constants.TRAINING])
     # Training cycle
     for epoch in range(training_epochs):
         avg_cost = 0.
@@ -123,7 +127,7 @@ with tf.Session() as sess:
         if epoch % display_step == 0:
             print("Epoch:", '%04d' % (epoch+1), "cost={:.9f}".format(avg_cost))
     print("Optimization Finished!")
-  #  builder.save()	
+   # builder.save()	
 
     # Test model
     pred = tf.nn.softmax(logits)  # Apply softmax to logits
@@ -131,7 +135,9 @@ with tf.Session() as sess:
     # Calculate accuracy
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
     print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
-
+    saver.save(sess, "/research/rraju2/mlp_mnist_test/model.ckpt")
+#    for op in tf.get_default_graph().get_operations():
+#    	print(str(op.name)) 
 #    w1, w2, w3 = sess.run([weights['h1'], weights['h2'], weights['out']])
 #    for i in weights:
 #	wx = sess.run(weights[i])
