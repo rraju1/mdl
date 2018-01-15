@@ -22,6 +22,7 @@ from __future__ import print_function
 
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
+from tensorflow.tools.graph_transforms import TransformGraph
 mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
 import numpy as np
 import tensorflow as tf
@@ -75,14 +76,6 @@ def ft(win):
 	for i in range(n_classes):
 	    test += tf.square(tf.gradients(logits[i],win))
 	return tf.clip_by_value(test,1e-37,1e+37)
-test_ft = tf.reduce_sum(tf.log(ft(weights['out'])))
-test_ft1 = tf.reduce_sum(tf.log(ft(weights['h2'])))
-test_ft2 = tf.reduce_sum(tf.log(ft(weights['h1'])))
-
-
-
-
-#----------------- try something
 def st(win1):
 	test = 0
 	for i in range(n_classes):
@@ -90,13 +83,15 @@ def st(win1):
 	    inter2 = tf.sqrt(ft(win1))
 	    test += tf.square(tf.reduce_sum(tf.div(inter1,inter2)))
 	return tf.log(tf.clip_by_value(test,1e-37,1e+37))
-test_st = st(weights['out'])
-test_st1 = st(weights['h2'])
-test_st2 = st(weights['h1'])
+first_term  = 0
+second_term = 0
+for i in weights:
+	first_term  += tf.reduce_sum(tf.log(ft(weights[i])))
+	second_term += st(weights[i])
 # Define loss and optimizer
 lambda1 = 0.00001
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y))# + 0.5 * lambda1*(-1 * tf.log(epsilon) + test_ft + test_st + test_ft1 + test_st1 + test_ft2 + test_st2)
+    logits=logits, labels=Y)) + 0.5 * lambda1*(-1 * tf.log(epsilon) + first_term + second_term)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
@@ -106,11 +101,9 @@ saver = tf.train.Saver()
 
 with tf.Session() as sess:
     sess.run(init)
-    export_dir = '/research/rraju2/mlp_mnist_test/'
+    export_dir = '/research/rraju2/mdl/tensorflow_scripts/results'
     if not os.path.exists(export_dir):
     	os.makedirs(export_dir)
-   # builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
-   # builder.add_meta_graph_and_variables(sess, [tf.saved_model.tag_constants.TRAINING])
     # Training cycle
     for epoch in range(training_epochs):
         avg_cost = 0.
@@ -127,19 +120,14 @@ with tf.Session() as sess:
         if epoch % display_step == 0:
             print("Epoch:", '%04d' % (epoch+1), "cost={:.9f}".format(avg_cost))
     print("Optimization Finished!")
-   # builder.save()	
 
     # Test model
     pred = tf.nn.softmax(logits)  # Apply softmax to logits
     correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(Y, 1))
     # Calculate accuracy
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+    saver.save(sess, "/research/rraju2/mdl/tensorflow_scripts/results/model.ckpt")
+    graph = tf.get_default_graph()
+    for op in graph.get_operations():
+    	print(op.name)
     print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
-    saver.save(sess, "/research/rraju2/mlp_mnist_test/model.ckpt")
-#    for op in tf.get_default_graph().get_operations():
-#    	print(str(op.name)) 
-#    w1, w2, w3 = sess.run([weights['h1'], weights['h2'], weights['out']])
-#    for i in weights:
-#	wx = sess.run(weights[i])
-#	txt = 'w' + str(i) + 'Updated1.csv'
-#    	np.savetxt(txt,wx, delimiter=", ")

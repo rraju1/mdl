@@ -1,0 +1,2 @@
+model_checkpoint_path: "/research/rraju2/mdl/tensorflow_scripts/results/model.ckpt"
+all_model_checkpoint_paths: "/research/rraju2/mdl/tensorflow_scripts/results/model.ckpt"
