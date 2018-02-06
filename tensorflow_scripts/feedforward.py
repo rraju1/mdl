@@ -27,6 +27,7 @@ mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
 import numpy as np
 import tensorflow as tf
 import os
+import argparse
 # Parameters
 learning_rate = .0001
 epsilon = .1
@@ -40,15 +41,20 @@ n_hidden_2 = 256 # 2nd layer number of neurons
 n_input = 784 # MNIST data input (img shape: 28*28)
 n_classes = 10 # MNIST total classes (0-9 digits)
 
+
+parser = argparse.ArgumentParser()
+args = parser.parse_args()
+
+
 # tf Graph input
 X = tf.placeholder("float", [None, n_input])
 Y = tf.placeholder("float", [None, n_classes])
 
 # Store layers weight & bias
 weights = {
-    'h1': tf.Variable(tf.random_normal([n_input, n_hidden_1])),
-    'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
-    'out': tf.Variable(tf.random_normal([n_hidden_2, n_classes]))
+    'h1': tf.Variable(tf.random_normal([n_input, n_hidden_1]), name="feed_weight1"),
+    'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2]), name="feed_weight2"),
+    'out': tf.Variable(tf.random_normal([n_hidden_2, n_classes]), name="feed_weight3")
 }
 
 biases = {
@@ -66,10 +72,11 @@ def multilayer_perceptron(x):
     layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
     # Output fully connected layer with a neuron for each class
     out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
-    return layer_1, layer_2, out_layer
+    return out_layer
 
 # Construct model
-l1, l2, logits = multilayer_perceptron(X)
+logits = multilayer_perceptron(X)
+
 #----------------- try something
 def ft(win):
 	test = tf.zeros(tf.shape(win),tf.float32)
@@ -91,13 +98,15 @@ for i in weights:
 # Define loss and optimizer
 lambda1 = 0.00001
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y)) + 0.5 * lambda1*(-1 * tf.log(epsilon) + first_term + second_term)
+    logits=logits, labels=Y)) #+ 0.5 * lambda1*(-1 * tf.log(epsilon) + first_term + second_term)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
 init = tf.global_variables_initializer()
 
-saver = tf.train.Saver()
+#saver = tf.train.Saver()
+
+
 
 with tf.Session() as sess:
     sess.run(init)
@@ -126,8 +135,10 @@ with tf.Session() as sess:
     correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(Y, 1))
     # Calculate accuracy
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-    saver.save(sess, "/research/rraju2/mdl/tensorflow_scripts/results/model.ckpt")
-    graph = tf.get_default_graph()
-    for op in graph.get_operations():
-    	print(op.name)
     print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
+    log_logits = logits.eval({X: mnist.test.images, Y: mnist.test.labels})
+    np.savetxt("logits.csv",log_logits, delimiter=", ")
+  #  saver.save(sess, "/research/rraju2/mdl/tensorflow_scripts/results/model.ckpt")
+#    graph = tf.get_default_graph()
+#    for op in graph.get_operations():
+#    	print(op.name)

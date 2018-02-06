@@ -48,14 +48,16 @@ parser = cifar10.parser
 parser.add_argument('--train_dir', type=str, default='/tmp/cifar10_train',
                     help='Directory where to write event logs and checkpoint.')
 
-parser.add_argument('--max_steps', type=int, default=1000000,
+parser.add_argument('--max_steps', type=int, default=100000,
                     help='Number of batches to run.')
 
 parser.add_argument('--log_device_placement', type=bool, default=False,
                     help='Whether to log device placement.')
 
-parser.add_argument('--log_frequency', type=int, default=10,
+parser.add_argument('--log_frequency', type=int, default=100,
                     help='How often to log results to the console.')
+
+n_classes = 10
 
 
 def train():
@@ -72,10 +74,35 @@ def train():
     # Build a Graph that computes the logits predictions from the
     # inference model.
     logits = cifar10.inference(images)
+    trainable_vars = tf.trainable_variables()
+    
+    first_term  = 0
+    second_term = 0
+    lambda1 = 0.0001
+      
+
+    def ft(win):
+		test = tf.zeros(tf.shape(win),tf.float32)
+		for i in range(n_classes):
+		    test += tf.square(tf.gradients(logits[i],win))
+		return tf.clip_by_value(test,1e-37,1e+37)
+    def st(win1):
+		test = 0
+		for i in range(n_classes):
+		    inter1 = tf.gradients(logits[i],win1)
+		    inter2 = tf.sqrt(ft(win1))
+		    test += tf.square(tf.reduce_sum(tf.div(inter1,inter2)))
+		return tf.log(tf.clip_by_value(test,1e-37,1e+37))
+    def get_weights():
+        return [v for v in tf.get_collection(tf.GraphKeys.MODEL_VARIABLES) if v.name.endswith('weights:0')]
+    
+    for i in get_weights():
+        first_term  += tf.reduce_sum(tf.log(ft(i)))
+        second_term += st(i)
 
     # Calculate loss.
-    loss = cifar10.loss(logits, labels)
-
+    loss = cifar10.loss(logits, labels) #+ 0.5 * lambda1 * ( -tf.log(0.1) + first_term + second_term)
+    
     # Build a Graph that trains the model with one batch of examples and
     # updates the model parameters.
     train_op = cifar10.train(loss, global_step)

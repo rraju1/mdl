@@ -1,13 +1,20 @@
 import os, argparse
-
+import random
 import tensorflow as tf
 
 # The original freeze_graph function
 # from tensorflow.python.tools.freeze_graph import freeze_graph 
 
 dir = os.path.dirname(os.path.realpath(__file__))
+def posOrNeg():
+    """Number needs to return positive or negative 1 to introduce error
+    """
+    if random.uniform(-1, 1) > 0:
+        return 1
+    else: 
+        return -1
 
-def freeze_graph(model_dir, output_node_names):
+def freeze_graph(model_dir, output_node_names, err):
     """Extract the sub graph defined by the output nodes and convert 
     all its variables into constant 
 
@@ -43,7 +50,17 @@ def freeze_graph(model_dir, output_node_names):
 
         # We restore the weights
         saver.restore(sess, input_checkpoint)
-
+#	for i in tf.get_default_graph().get_operations():
+#		print(i)
+        for v in tf.trainable_variables():
+		if "feed_weight" in v.name:
+			#v = v + posOrNeg()*err*v
+			error = lambda a: a + posOrNeg()*err*a
+			v1 = tf.map_fn(error, v)
+			v = tf.assign(v, v1)
+#	for i in var_list:
+#		print(i.name)
+	
         # We use a built-in TF helper to export variables to constants
         output_graph_def = tf.graph_util.convert_variables_to_constants(
             sess, # The session is used to retrieve the weights
@@ -54,14 +71,16 @@ def freeze_graph(model_dir, output_node_names):
         # Finally we serialize and dump the output graph to the filesystem
         with tf.gfile.GFile(output_graph, "wb") as f:
             f.write(output_graph_def.SerializeToString())
-        print("%d ops in the final graph." % len(output_graph_def.node))
+        #print("%d ops in the final graph." % len(output_graph_def.node))
 
     return output_graph_def
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_dir", type=str, default="results", help="Model folder to export")
     parser.add_argument("--output_node_names", type=str, default="", help="The name of the output nodes, comma separated.")
+    parser.add_argument('--err',type=float,default=0, help="Error introduced to weights in percentage")
     args = parser.parse_args()
 
-    freeze_graph(args.model_dir, args.output_node_names)
+    freeze_graph(args.model_dir, args.output_node_names, args.err/100)
