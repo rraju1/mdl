@@ -104,7 +104,7 @@ train_op = optimizer.minimize(loss_op)
 # Initializing the variables
 init = tf.global_variables_initializer()
 
-#saver = tf.train.Saver()
+saver = tf.train.Saver()
 
 
 
@@ -128,6 +128,7 @@ with tf.Session() as sess:
         # Display logs per epoch step
         if epoch % display_step == 0:
             print("Epoch:", '%04d' % (epoch+1), "cost={:.9f}".format(avg_cost))
+    print(logits.shape)
     print("Optimization Finished!")
 
     # Test model
@@ -138,7 +139,7 @@ with tf.Session() as sess:
     print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
     log_logits = logits.eval({X: mnist.test.images, Y: mnist.test.labels})
     np.savetxt("logits.csv",log_logits, delimiter=", ")
-  #  saver.save(sess, "/research/rraju2/mdl/tensorflow_scripts/results/model.ckpt")
+    saver.save(sess, "/research/rraju2/mdl/tensorflow_scripts/results/model.ckpt")
 #    graph = tf.get_default_graph()
 #    for op in graph.get_operations():
 #    	print(op.name)

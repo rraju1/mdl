@@ -6,13 +6,6 @@ import tensorflow as tf
 # from tensorflow.python.tools.freeze_graph import freeze_graph 
 
 dir = os.path.dirname(os.path.realpath(__file__))
-def posOrNeg():
-    """Number needs to return positive or negative 1 to introduce error
-    """
-    if random.uniform(-1, 1) > 0:
-        return 1
-    else: 
-        return -1
 
 def freeze_graph(model_dir, output_node_names, err):
     """Extract the sub graph defined by the output nodes and convert 
