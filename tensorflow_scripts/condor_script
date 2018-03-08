@@ -1,0 +1,15 @@
+################
+#
+# Condor submit file for standard universe example
+#
+################
+
+Universe        = vanilla
+Executable      = run_sim.sh
+
+output          = /research/rraju2/mdl/tensorflow_scripts/results/out_feed.out
+error           = /research/rraju2/mdl/tensorflow_scripts/results/out_feed.error
+log             = /research/rraju2/mdl/tensorflow_scripts/results/out_feed.log
+
+Initialdir	= /tmp/
+Queue

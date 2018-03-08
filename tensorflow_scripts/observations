@@ -1,0 +1,2 @@
+network added with relu for lambda 1e-4 does not converge -> why
+network with relu for lambda 1e-5 does and accuracy is better -> should look at the norm 

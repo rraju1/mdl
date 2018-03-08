@@ -43,7 +43,7 @@ def change_weights(model_dir, err):
     clear_devices = True
 
     mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
-    original_logits = np.genfromtxt('logits_fms.csv', delimiter=', ')
+    original_logits = np.genfromtxt('logits.csv', delimiter=', ')
     
     # We start a session using a temporary fresh Graph
     with tf.Session(graph=tf.Graph()) as sess:
@@ -82,7 +82,7 @@ def change_weights(model_dir, err):
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Add error and inference')
-	parser.add_argument("--model_dir", type=str, default="results", help="Model folder to export")
+	parser.add_argument("--model_dir", type=str, default="results_ori", help="Model folder to export")
 	parser.add_argument("--err", type=float, default=0, help="Error term")
 	
 	args = parser.parse_args()

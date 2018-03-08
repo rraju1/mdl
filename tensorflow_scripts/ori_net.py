@@ -92,7 +92,7 @@ def ft(win):
 	test = tf.zeros(tf.shape(win),tf.float32)
 	for i in range(n_classes):
 	    test += tf.square(tf.gradients(logits[i],win))
-	return test
+	return tf.clip_by_value(test,1e-37,1e+37)
 def st(win1):
 	test = 0
 	for i in range(n_classes):
@@ -101,34 +101,30 @@ def st(win1):
 	    test += tf.square(tf.reduce_sum(tf.div(inter1,inter2)))
 	return tf.log(tf.clip_by_value(test,1e-37,1e+37))
 
-def sec_term():
+def st(win1):
 	test = 0
-	accumulator = 0
 	for i in range(n_classes):
-		for j in weights:
-			num   = tf.abs(tf.gradients(logits[i], weights[j]))
-			denom = tf.sqrt(ft(weights[j]))
-			divisor = tf.div(num,denom)
-			test += tf.reduce_sum(divisor)
-		accumulator += tf.square(test)
-	return tf.log(tf.clip_by_value(accumulator,1e-37,1e+37))
+	    inter1 = tf.gradients(logits[i],win1)
+	    inter2 = tf.sqrt(ft(win1))
+	    test += tf.square(tf.reduce_sum(tf.div(inter1,inter2)))
+	return tf.log(tf.clip_by_value(test,1e-37,1e+37))
+
 
 first_term  = 0
-second_term = sec_term()
+second_term = 0
 for i in weights:
-	first_term  += tf.reduce_sum(tf.log(tf.clip_by_value(ft(weights[i]),1e-37,1e+37)))
-
-# tf.clip_by_value(test,1e-37,1e+37)
+	first_term  += tf.reduce_sum(tf.log(ft(weights[i])))
+	second_term += st(weights[i])
 
 lambda1 = 1/args.lambda_term
-#first_term = tf.Print(first_term, [first_term])
-#second_term = tf.Print(second_term, [second_term])
+first_term = tf.Print(second_term, [first_term])
+second_term = tf.Print(second_term, [second_term])
 regularizer = 0.5 * lambda1*(-1 * L * tf.log(epsilon) + first_term + L * second_term)
-#regularizer = tf.Print(regularizer, [regularizer], "this is the regularizer term")
+regularizer = tf.Print(regularizer, [regularizer], "this is the regularizer term")
 # Define loss and optimizer
 
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y)) + regularizer
+    logits=logits, labels=Y)) #+ regularizer
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
@@ -138,7 +134,7 @@ saver = tf.train.Saver()
 
 with tf.Session() as sess:
     sess.run(init)
-    export_dir = '/research/rraju2/mdl/tensorflow_scripts/results'
+    export_dir = '/research/rraju2/mdl/tensorflow_scripts/results_ori'
     if not os.path.exists(export_dir):
     	os.makedirs(export_dir)
     # Training cycle
@@ -166,8 +162,8 @@ with tf.Session() as sess:
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
     print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
     log_logits = logits.eval({X: mnist.test.images, Y: mnist.test.labels})
-    np.savetxt("logits_fms.csv",log_logits, delimiter=", ")
-    saver.save(sess, "/research/rraju2/mdl/tensorflow_scripts/results/model.ckpt")
+    np.savetxt("logits.csv",log_logits, delimiter=", ")
+    saver.save(sess, "/research/rraju2/mdl/tensorflow_scripts/results_ori/model.ckpt")
 #    graph = tf.get_default_graph()
 #    for op in graph.get_operations():
 #    	print(op.name)

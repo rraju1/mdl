@@ -11,7 +11,7 @@ do
 for number in {0..20..2}
 do
 echo $number
-python err_infer.py --err=$number
+python err_ori_infer.py --err=$number
 done
 done
 #done
