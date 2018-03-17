@@ -74,6 +74,7 @@ def change_weights(model_dir, err):
         print(numpy_log)
         error1 = np.linalg.norm(numpy_log - original_logits)
         ori_norm = np.linalg.norm(original_logits)
+        print("value of original norm: ", ori_norm)
         print("Norm: ", error1/ori_norm)
         print("Accuracy: ", sess.run(output,({p1: mnist.test.images, p2: mnist.test.labels})))
 	#for i in tf.get_default_graph().get_operations():

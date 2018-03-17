@@ -78,53 +78,13 @@ def multilayer_perceptron(x):
 # Construct model
 logits = multilayer_perceptron(X)
 
-L = 0
-#iterating over all variables
-for variable in tf.trainable_variables():  
-    local_parameters=1
-    shape = variable.get_shape()  #getting shape of a variable
-    for i in shape:
-        local_parameters*=i.value  #mutiplying dimension values
-	L += local_parameters
-#print(L)
-#----------------- try something
-def ft(win):
-	test = tf.zeros(tf.shape(win),tf.float32)
-	for i in range(n_classes):
-	    test += tf.square(tf.gradients(logits[i],win))
-	return tf.clip_by_value(test,1e-37,1e+37)
-def st(win1):
-	test = 0
-	for i in range(n_classes):
-	    inter1 = tf.gradients(logits[i],win1)
-	    inter2 = tf.sqrt(ft(win1))
-	    test += tf.square(tf.reduce_sum(tf.div(inter1,inter2)))
-	return tf.log(tf.clip_by_value(test,1e-37,1e+37))
-
-def st(win1):
-	test = 0
-	for i in range(n_classes):
-	    inter1 = tf.gradients(logits[i],win1)
-	    inter2 = tf.sqrt(ft(win1))
-	    test += tf.square(tf.reduce_sum(tf.div(inter1,inter2)))
-	return tf.log(tf.clip_by_value(test,1e-37,1e+37))
-
-
-first_term  = 0
-second_term = 0
-for i in weights:
-	first_term  += tf.reduce_sum(tf.log(ft(weights[i])))
-	second_term += st(weights[i])
-
-lambda1 = 1/args.lambda_term
-first_term = tf.Print(second_term, [first_term])
-second_term = tf.Print(second_term, [second_term])
-regularizer = 0.5 * lambda1*(-1 * L * tf.log(epsilon) + first_term + L * second_term)
-regularizer = tf.Print(regularizer, [regularizer], "this is the regularizer term")
 # Define loss and optimizer
 
-loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=logits, labels=Y)) #+ regularizer
+
+cost = tf.nn.softmax_cross_entropy_with_logits(
+    logits=logits, labels=Y)
+print(cost.shape)
+loss_op = tf.reduce_mean(cost) #+ regularizer
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 # Initializing the variables
