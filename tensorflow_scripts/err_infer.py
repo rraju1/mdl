@@ -8,19 +8,20 @@ n_input = 784 # MNIST data input (img shape: 28*28)
 n_classes = 10 # MNIST total classes (0-9 digits)
 
 def posOrNeg():
-	sample = random.randint(0, 1)
-	if (sample == 0):
-		return -1
-	return 1
+    sample = random.randint(0, 1)
+    if (sample == 0):
+        return -1
+    return 1
 
 def add_error(a, err):
     """ Needs to return a range for specified a and err term
     """
-    #return random.uniform(-1*a*err, a*err)
-    a_abs = abs(a)
-    mu = err * a_abs
-    sigma = mu
-    return posOrNeg() * random.gauss(mu, sigma)
+    a = abs(a)
+    return random.uniform(-a*err, a*err)
+    # a_abs = abs(a)
+    # mu = err * a_abs
+    # sigma = mu
+    # return posOrNeg() * random.gauss(mu, sigma)
 
 def change_weights(model_dir, err):
     """Extract the sub graph defined by the output nodes and convert 
@@ -28,7 +29,7 @@ def change_weights(model_dir, err):
 
     Args:
         model_dir: the root folder containing the checkpoint state file
-        err: 	   the error introduce 
+        err:       the error introduce 
     """
     if not tf.gfile.Exists(model_dir):
         raise AssertionError(
@@ -55,18 +56,20 @@ def change_weights(model_dir, err):
 
         graph = tf.get_default_graph()
 
-        p1 = graph.get_tensor_by_name('Placeholder:0')
-        p2 = graph.get_tensor_by_name('Placeholder_1:0')
-        output = graph.get_tensor_by_name('Mean_1:0')
-        log = graph.get_tensor_by_name('add:0')
+        p1 = graph.get_tensor_by_name('x:0')
+        p2 = graph.get_tensor_by_name('labels:0')
+        output = graph.get_tensor_by_name('accuracy/Mean:0')
+        log = graph.get_tensor_by_name('logits:0')
 
         for v in tf.trainable_variables():
-			if "feed_weight" in v.name:
-				#v = v + posOrNeg()*err*v
-				error = lambda a: a + add_error(a, err)
-				v1 = tf.map_fn(error, v)
-				v = tf.assign(v, v1)
-				sess.run(v)
+            if "Variable:0" in v.name:
+                #v = v + posOrNeg()*err*v
+                error = lambda a: a + posOrNeg() * add_error(a, err)
+                print("original weight value with error: ,", err ,":  ", sess.run(v,({p1: mnist.test.images, p2: mnist.test.labels})))
+                v1 = tf.map_fn(error, v)
+                v.assign(v1).eval()
+                #sess.run(v)
+                print("altered weight value with,", err ,":  ", sess.run(v,({p1: mnist.test.images, p2: mnist.test.labels})))
         
         numpy_log = sess.run(log,({p1: mnist.test.images, p2: mnist.test.labels}))
         print(original_logits)
@@ -74,17 +77,17 @@ def change_weights(model_dir, err):
         print(numpy_log)
         error1 = np.linalg.norm(numpy_log - original_logits)
         ori_norm = np.linalg.norm(original_logits)
-        print("value of original norm: ", ori_norm)
+        #print("value of original norm: ", ori_norm)
         print("Norm: ", error1/ori_norm)
         print("Accuracy: ", sess.run(output,({p1: mnist.test.images, p2: mnist.test.labels})))
-	#for i in tf.get_default_graph().get_operations():
-	#	print(i.name)
+    #for i in tf.get_default_graph().get_operations():
+    #   print(i.name)
 
 
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description='Add error and inference')
-	parser.add_argument("--model_dir", type=str, default="results", help="Model folder to export")
-	parser.add_argument("--err", type=float, default=0, help="Error term")
-	
-	args = parser.parse_args()
-	change_weights(args.model_dir, args.err/100)
+    parser = argparse.ArgumentParser(description='Add error and inference')
+    parser.add_argument("--model_dir", type=str, default="results", help="Model folder to export")
+    parser.add_argument("--err", type=float, default=0, help="Error term")
+    
+    args = parser.parse_args()
+    change_weights(args.model_dir, args.err/100)
