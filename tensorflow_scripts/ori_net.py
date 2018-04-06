@@ -19,6 +19,7 @@ Project: https://github.com/aymericdamien/TensorFlow-Examples/
 
 
 from __future__ import print_function
+from datetime import datetime
 
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
@@ -28,10 +29,10 @@ import tensorflow as tf
 import os
 import argparse
 # Parameters
-learning_rate = .0001
+learning_rate = .005
 epsilon = .1
-training_epochs = 15
-batch_size = 100
+training_epochs = 150
+batch_size = 10000
 display_step = 1
 
 # Network Parameters
@@ -40,11 +41,9 @@ n_hidden_2 = 256 # 2nd layer number of neurons
 n_input = 784 # MNIST data input (img shape: 28*28)
 n_classes = 10 # MNIST total classes (0-9 digits)
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--lambda_term', type=float, default=10000,
-                    help='lambda term')
-args = parser.parse_args()
+now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+root_logdir = "tf_logs_ori"
+logdir = "{}/run-{}/".format(root_logdir, now)
 
 
 # tf Graph input
@@ -64,7 +63,6 @@ biases = {
     'out': tf.Variable(tf.random_normal([n_classes]), tf.float64)
 }
 
-
 # Create model
 def multilayer_perceptron(x):
     # Hidden fully connected layer with 256 neurons
@@ -83,14 +81,20 @@ logits = multilayer_perceptron(X)
 
 cost = tf.nn.softmax_cross_entropy_with_logits(
     logits=logits, labels=Y)
-print(cost.shape)
-loss_op = tf.reduce_mean(cost) #+ regularizer
+loss_op = tf.reduce_mean(cost) 
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
+
+cost_summary = tf.summary.scalar('Cross entropy loss', loss_op)
+file_writer = tf.summary.FileWriter(logdir, tf.get_default_graph())
 # Initializing the variables
 init = tf.global_variables_initializer()
 
 saver = tf.train.Saver()
+#std_array = []
+
+#tenList = tf.Variable(tf.concat([tf.reshape(weights['h1'], [-1]),tf.reshape(weights['h2'], [-1]), tf.reshape(weights['out'], [-1])], axis=0))
+#tf.hessians(loss_op, tf.reshape(weights['h1'], [-1]))
 
 with tf.Session() as sess:
     sess.run(init)
@@ -112,6 +116,10 @@ with tf.Session() as sess:
         # Display logs per epoch step
         if epoch % display_step == 0:
             print("Epoch:", '%04d' % (epoch+1), "cost={:.9f}".format(avg_cost))
+            cost_sum = cost_summary.eval(feed_dict={X: batch_x, Y: batch_y})
+            file_writer.add_summary(cost_sum, epoch)
+            #std_array.append(avg_cost)
+            #print("Standard deviation: ", np.std(std_array))
     
 
     print("Optimization Finished!")
@@ -121,9 +129,29 @@ with tf.Session() as sess:
     # Calculate accuracy
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
     print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
-    log_logits = logits.eval({X: mnist.test.images, Y: mnist.test.labels})
-    np.savetxt("logits.csv",log_logits, delimiter=", ")
-    saver.save(sess, "/research/rraju2/mdl/tensorflow_scripts/results_ori/model.ckpt")
+    #log_logits = logits.eval({X: mnist.test.images, Y: mnist.test.labels})
+    
+    #print(tf.reshape(weights['h1'], [-1]).shape)
+    #print(tf.reshape(weights['h2'], [-1]).shape)
+    #print(tf.reshape(weights['out'], [-1]).shape)
+    
+    #print(tenList.shape)
+    ##flat_list = [item for sublist in tenList for item in sublist]
+    #tvars = tf.trainable_variables()
+#
+    #dloss_dw = tf.gradients(loss_op, tvars)[0]
+    #dim, _ = dloss_dw.get_shape()
+#
+    #hess = []
+    #for i in range(dim):
+        ## tf.slice: https://www.tensorflow.org/versions/0.6.0/api_docs/python/array_ops.html#slice
+            #dfx_i = tf.slice(dloss_dw, begin=[i,0] , size=[1,1])
+            #ddfx_i = tf.gradients(dfx_i, tenList)[0] # whenever we use tf.gradients, make sure you get the actual tensors by putting [0] at the end
+            #hess.append(ddfx_i)
+    #hess = tf.squeeze(hess)
+    #print("Hessian:", hess.eval({X: mnist.test.images, Y: mnist.test.labels}))
+    #np.savetxt("logits.csv",log_logits, delimiter=", ")
+    #saver.save(sess, "/research/rraju2/mdl/tensorflow_scripts/results_ori/model.ckpt")
 #    graph = tf.get_default_graph()
 #    for op in graph.get_operations():
 #    	print(op.name)
