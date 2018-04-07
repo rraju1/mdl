@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from tensorflow.examples.tutorials.mnist import input_data
+import matplotlib.pyplot as plt
 
 # grab all weights from the network
 def get_weights():
@@ -27,7 +28,7 @@ input_checkpoint = checkpoint.model_checkpoint_path
 mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
 
 alpha_range = np.linspace(-1, 2, 25)
-data_for_plots = np.zeros((25, 1))
+data_for_plots = np.zeros((25, 2))
 
 with tf.Session() as sess1:
 	saver_sharp = tf.train.import_meta_graph(input_checkpoint + '.meta', clear_devices=clear_devices)
@@ -46,13 +47,25 @@ with tf.Session() as sess1:
 	for alpha in alpha_range:
 		#weights in the current graph
 		weights = get_weights()
+		#print(weights[0].eval())
 		for i in range(len(sharp_weights)):
-			weights[i] = alpha * tf.convert_to_tensor(sharp_weights[i]) + (1 - alpha) * tf.convert_to_tensor(tf.convert_to_tensor(flat_weights[i]))
-			weights[i].eval()
-		#print(type(xent))
-		test_acc = sess1.run([accuracy], {p1: mnist.test.images, p2: mnist.test.labels})
-		data_for_plots[x] = test_acc
+			temp = alpha * tf.convert_to_tensor(sharp_weights[i]) + (1 - alpha) * tf.convert_to_tensor(tf.convert_to_tensor(flat_weights[i]))
+			weights[i].assign(temp).eval()
+		#print(weights[0].eval())
+		cross, test_acc = sess1.run([xent, accuracy], {p1: mnist.test.images, p2: mnist.test.labels})
+		#print(test_acc)
+		data_for_plots[x, :] = [cross, test_acc]
 		x += 1
 
 
-		
+fig, ax1 = plt.subplots()
+ax2 = ax1.twinx()
+ax1.plot(alpha_range, data_for_plots[:, 0], 'b-')
+ax2.plot(alpha_range, data_for_plots[:, 1]*100., 'r-')
+
+ax1.set_xlabel('alpha')
+ax1.set_ylabel('Cross Entropy', color='b')
+ax2.set_ylabel('Accuracy', color='r')
+ax1.grid(b=True, which='both')
+plt.savefig('Figures/MLP.pdf')
+print('Plot saved in Figures/MLP.pdf')
